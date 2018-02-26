@@ -1,4 +1,4 @@
-import akka.actor.{Actor, Props}
+import akka.actor.{Actor, ActorRef, Props}
 import akka.util.Timeout
 
 //Event,Ticketの状態を表す？
@@ -23,15 +23,30 @@ object BoxOffice {
   case object EventExists extends EventResponce
 }
 
+//TIcketSellerを子アクターとして作成し、リクエストされたイベントに対して
+//応答できるようにTicketSellerにチケットの販売を委譲する
 class BoxOffice(implicit timeout:Timeout) extends Actor {
   import BoxOffice._
   import context._
 
+  //テスト時にoverride出来るように別メソッドとして定義
   def createTicketSeller (name:String) =
     context.actorOf(TicketSeller.props(name), name)
 
   def receive = {
-    case CreateEvent(name,tickets) =>
+    case CreateEvent(name,tickets) => {
+      def create = {
+        val eventTickets: ActorRef = createTicketSeller(name)
+        val newTickets: Vector[TicketSeller.Ticket] = (1 to tickets).map{ ticketId =>
+          TicketSeller.Ticket(ticketId)
+        }.toVector
+        eventTickets ! TicketSeller.Add(newTickets)
+        sender() ! EventCreated
+      }
+      //同名のTicketSellerが作成されていない場合は、create
+      //作成されていた場合は、EventExistsを返す
+      context.child(name).fold(create)(_ => sender() ! EventExists)
+    }
   }
 
 }
