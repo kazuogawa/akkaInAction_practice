@@ -35,6 +35,7 @@ class BoxOffice(implicit timeout:Timeout) extends Actor {
 
   def receive = {
     case CreateEvent(name,tickets) => {
+      //こうやって関数を中に書くのが普通なのか・・・
       def create = {
         val eventTickets: ActorRef = createTicketSeller(name)
         val newTickets: Vector[TicketSeller.Ticket] = (1 to tickets).map{ ticketId =>
@@ -46,6 +47,13 @@ class BoxOffice(implicit timeout:Timeout) extends Actor {
       //同名のTicketSellerが作成されていない場合は、create
       //作成されていた場合は、EventExistsを返す
       context.child(name).fold(create)(_ => sender() ! EventExists)
+    }
+    case GetTickets(event,tickets) => {
+      def notFound = sender () ! TicketSeller.Tickets(event)
+      def buy(child:ActorRef) = child.forward(TicketSeller.Buy(tickets))
+      //TicketSellerが見つからない場合は、空のチケットメッセージを送信
+      //TicketSellerが見つかった場合は、TicketSellerから購入
+      context.child(event).fold(notFound)(buy)
     }
   }
 
