@@ -1,6 +1,9 @@
 import akka.actor.{Actor, ActorRef, Props}
 import akka.util.Timeout
 
+import scala.collection.immutable
+import scala.concurrent.Future
+
 //Event,Ticketの状態を表す？
 //
 object BoxOffice {
@@ -55,6 +58,16 @@ class BoxOffice(implicit timeout:Timeout) extends Actor {
       //TicketSellerが見つかった場合は、TicketSellerから購入
       context.child(event).fold(notFound)(buy)
     }
+    case GetEvents =>
+      import akka.pattern.ask
+      import akka.pattern.pipe
+      def getEvents: immutable.Iterable[Future[Option[Event]]] = context.children.map{ child =>
+        self.ask(GetEvent(child.path.name)).mapTo[Option[Event]]
+      }
+      def convertToEvents(f:Future[Iterable[Option[Event]]]): Future[Events] =
+        f.map(_.flatten).map{i => Events(i.toVector)}
+      //pipeはFutureの値をactorに送信することを簡単にするもの
+      pipe(convertToEvents(Future.sequence(getEvents))) to sender()
   }
 
 }
