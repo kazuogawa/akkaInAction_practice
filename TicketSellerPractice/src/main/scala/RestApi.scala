@@ -21,7 +21,6 @@ class RestApi(system:ActorSystem, timeout:Timeout) extends RestRoutes {
 
 trait RestRoutes extends BoxOfficeApi with EventMarshalling {
   def routes:Route = eventsRoute ~ eventRoute ~ ticketsRoute
-
   def eventsRoute: Route = {
     //pathPrefixとは・・・
     pathPrefix("events"){

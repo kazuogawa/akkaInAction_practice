@@ -1,3 +1,5 @@
+package actortest
+
 import akka.testkit.TestKit
 import org.scalatest.{BeforeAndAfterAll, Suite}
 
